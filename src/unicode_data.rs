@@ -32,12 +32,12 @@ impl UnicodeCharacter {
     }
     pub fn printable_character(&self) -> String {
         match self.character {
-            '\t' => "'\\t'".to_string(),
-            '\n' => "'\\n'".to_string(),
-            '\r' => "'\\r'".to_string(),
-            '\'' => "'\\''".to_string(),
-            '\\' => "'\\\\'".to_string(),
-            _ => String::from("'") + self.character.to_string().as_str() + "'",
+            '\t' => "\\t".to_string(),
+            '\n' => "\\n".to_string(),
+            '\r' => "\\r".to_string(),
+            '\'' => "\\'".to_string(),
+            '\\' => "\\\\".to_string(),
+            _ => self.character.to_string(),
         }
     }
 }
