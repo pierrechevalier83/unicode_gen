@@ -1,5 +1,5 @@
-use crate::unicode_blocks::UnicodeBlocks;
-use std::fs::{create_dir, File};
+use crate::unicode_blocks::{UnicodeBlock, UnicodeBlocks};
+use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -8,7 +8,7 @@ mod unicode_blocks;
 
 const BLOCKS_FILE: &str = "Blocks.txt";
 const UNICODE_DATA_FILE: &str = "UnicodeData.txt";
-const GENERATED_CODE_DIR: &str = "unicode_types";
+const GENERATED_CODE_DIR: &str = "unicode_types/src";
 
 #[derive(StructOpt)]
 struct Options {
@@ -21,17 +21,7 @@ struct Options {
     ucd_dir: PathBuf,
 }
 
-fn generate_unicode_types(blocks: &UnicodeBlocks) -> std::io::Result<()> {
-    // TODO:
-    // mkdir unicode
-    // touch unicode/mod.rs
-    // dump the comment in there
-    // list the mods in there
-    // for each block
-    // touch unicode/block.as_snake_case().rs
-    // place enums in there
-    // Variants will come later
-    create_dir(GENERATED_CODE_DIR)?;
+fn generate_mod_rs(blocks: &UnicodeBlocks) -> std::io::Result<()> {
     let mod_file = PathBuf::from(GENERATED_CODE_DIR).join("mod.rs");
     let mod_content = blocks
         .comments
@@ -58,6 +48,26 @@ fn generate_unicode_types(blocks: &UnicodeBlocks) -> std::io::Result<()> {
         .collect::<Vec<_>>();
     let mut file = File::create(mod_file)?;
     file.write_all(&binary_mod_content)
+}
+
+fn generate_block_files(blocks: &Vec<UnicodeBlock>) -> std::io::Result<()> {
+    for block in blocks {
+        let filename = block.as_snake_case() + ".rs";
+        let file = PathBuf::from(GENERATED_CODE_DIR).join(filename);
+        let content = String::from("enum ") + block.as_upper_camel_case().as_str() + " {\n}";
+        let mut file = File::create(file)?;
+        file.write_all(&content.bytes().collect::<Vec<_>>())?;
+    }
+    Ok(())
+}
+
+fn generate_unicode_types(blocks: &UnicodeBlocks) -> std::io::Result<()> {
+    create_dir_all(GENERATED_CODE_DIR)?;
+    generate_mod_rs(blocks)?;
+    generate_block_files(&blocks.blocks)
+    // TODO:
+    // const
+    // Variants for enums
 }
 
 fn main() {

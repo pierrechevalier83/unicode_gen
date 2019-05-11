@@ -17,7 +17,7 @@ pub struct UnicodeBlock {
 impl UnicodeBlock {
     /// Making the assumption that the initial string is composed of upper camel case words only
     /// separated by spaces and dashes.
-    pub fn as_upper_camel_case_name(&self) -> String {
+    pub fn as_upper_camel_case(&self) -> String {
         let mut upper_camel_case = self.name.clone();
         upper_camel_case.retain(|c| c != ' ' && c != '-');
         upper_camel_case
