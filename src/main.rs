@@ -1,10 +1,14 @@
-use std::fs::File;
+use crate::unicode_blocks::UnicodeBlocks;
+use std::fs::{create_dir, File};
 use std::io::prelude::*;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+mod unicode_blocks;
+
 const BLOCKS_FILE: &str = "Blocks.txt";
 const UNICODE_DATA_FILE: &str = "UnicodeData.txt";
+const GENERATED_CODE_DIR: &str = "unicode_types";
 
 #[derive(StructOpt)]
 struct Options {
@@ -17,88 +21,49 @@ struct Options {
     ucd_dir: PathBuf,
 }
 
-#[derive(Debug)]
-struct Range {
-    begin: u32,
-    end: u32,
-}
-
-#[derive(Debug)]
-struct UnicodeBlock {
-    range: Range,
-    name: String,
-}
-
-#[derive(Debug)]
-struct UnicodeBlocks {
-    /// Each line of comments, stripped from the starting "# "
-    comments: Vec<String>,
-    blocks: Vec<UnicodeBlock>,
-}
-
-impl UnicodeBlocks {
-    /// Parse comment lines from Blocks file
-    /// Panic if the syntax isn't what we expect
-    fn parse_comments(lines: &[&str]) -> Vec<String> {
-        lines
-            .iter()
-            .filter(|line| !line.contains("EOF"))
-            .map(|line| {
-                let mut line = line.to_string();
-                println!("line: \"{}\"", line);
-                if line.remove(0) != '#' {
-                    panic!("Unrecognized syntax in \"Blocks\" comment");
-                }
-                if line.is_empty() {
-                    "".to_string()
-                } else if line.remove(0) != ' ' {
-                    panic!("Unrecognized syntax in \"Blocks\" comment");
-                } else {
-                    line
-                }
-            })
-            .collect()
-    }
-    fn parse_block(line: &&str) -> UnicodeBlock {
-        let tokens = line.split(';').collect::<Vec<_>>();
-        if !tokens.len() == 2 {
-            panic!("Unrecognized syntax in \"Blocks\" block line");
-        }
-        let range = tokens[0].split("..").collect::<Vec<_>>();
-        if !range.len() == 2 {
-            panic!("Unrecognized syntax in \"Blocks\" block line");
-        }
-        UnicodeBlock {
-            range: Range {
-                begin: u32::from_str_radix(range[0], 16).expect("Fail"),
-                end: u32::from_str_radix(range[1], 16).expect("Fail"),
-            },
-            name: tokens[1].trim().to_string(),
-        }
-    }
-    /// Parse block lines from Blocks file
-    fn parse_blocks(lines: &[&str]) -> Vec<UnicodeBlock> {
-        lines.into_iter().map(Self::parse_block).collect()
-    }
-    /// Parse the unicode blocks file into Self
-    fn from_file(path: PathBuf) -> Result<Self, std::io::Error> {
-        let mut file = File::open(&path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-        let (comments, blocks): (Vec<_>, Vec<_>) = contents
-            .lines()
-            .filter(|line| !line.is_empty())
-            .partition(|line| line.starts_with('#'));
-        Ok(UnicodeBlocks {
-            comments: Self::parse_comments(&comments),
-            blocks: Self::parse_blocks(&blocks),
+fn generate_unicode_types(blocks: &UnicodeBlocks) -> std::io::Result<()> {
+    // TODO:
+    // mkdir unicode
+    // touch unicode/mod.rs
+    // dump the comment in there
+    // list the mods in there
+    // for each block
+    // touch unicode/block.as_snake_case().rs
+    // place enums in there
+    // Variants will come later
+    create_dir(GENERATED_CODE_DIR)?;
+    let mod_file = PathBuf::from(GENERATED_CODE_DIR).join("mod.rs");
+    let mod_content = blocks
+        .comments
+        .iter()
+        .map(move |line| {
+            if line.is_empty() {
+                String::from("///\n")
+            } else {
+                String::from("/// ") + &line + "\n"
+            }
         })
-    }
+        .chain(
+            blocks
+                .blocks
+                .iter()
+                .map(|block| String::from("\n") + "mod " + block.as_snake_case().as_str() + ";"),
+        )
+        .chain(std::iter::once(String::from("\n")))
+        .collect::<Vec<_>>();
+    let binary_mod_content = mod_content
+        .iter()
+        .map(|s| s.bytes().collect::<Vec<_>>())
+        .flatten()
+        .collect::<Vec<_>>();
+    let mut file = File::create(mod_file)?;
+    file.write_all(&binary_mod_content)
 }
 
 fn main() {
     let options = Options::from_args();
     let blocks_file = options.ucd_dir.join(BLOCKS_FILE);
-    let blocks = UnicodeBlocks::from_file(blocks_file);
+    let blocks = UnicodeBlocks::from_file(blocks_file).expect("Parse error");
+    generate_unicode_types(&blocks);
     println!("{:#?}", blocks);
 }
