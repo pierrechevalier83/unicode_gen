@@ -28,34 +28,9 @@ impl UnicodeBlock {
 }
 
 #[derive(Debug)]
-pub struct UnicodeBlocks {
-    /// Each line of comments, stripped from the starting "# "
-    pub comments: Vec<String>,
-    pub blocks: Vec<UnicodeBlock>,
-}
+pub struct UnicodeBlocks(pub Vec<UnicodeBlock>);
 
 impl UnicodeBlocks {
-    /// Parse comment lines from Blocks file
-    /// Panic if the syntax isn't what we expect
-    fn parse_comments(lines: &[&str]) -> Vec<String> {
-        lines
-            .iter()
-            .filter(|line| !line.contains("EOF"))
-            .map(|line| {
-                let mut line = line.to_string();
-                if line.remove(0) != '#' {
-                    panic!("Unrecognized syntax in \"Blocks\" comment");
-                }
-                if line.is_empty() {
-                    "".to_string()
-                } else if line.remove(0) != ' ' {
-                    panic!("Unrecognized syntax in \"Blocks\" comment");
-                } else {
-                    line
-                }
-            })
-            .collect()
-    }
     fn parse_block(line: &&str) -> UnicodeBlock {
         let tokens = line.split(';').collect::<Vec<_>>();
         if !tokens.len() == 2 {
@@ -82,13 +57,11 @@ impl UnicodeBlocks {
         let mut file = File::open(&path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let (comments, blocks): (Vec<_>, Vec<_>) = contents
+        let blocks = contents
             .lines()
             .filter(|line| !line.is_empty())
-            .partition(|line| line.starts_with('#'));
-        Ok(UnicodeBlocks {
-            comments: Self::parse_comments(&comments),
-            blocks: Self::parse_blocks(&blocks),
-        })
+            .filter(|line| !line.starts_with('#'))
+            .collect::<Vec<_>>();
+        Ok(UnicodeBlocks(Self::parse_blocks(&blocks)))
     }
 }

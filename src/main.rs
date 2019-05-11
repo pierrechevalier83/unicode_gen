@@ -27,24 +27,16 @@ struct Options {
 fn generate_lib_rs(blocks: &UnicodeBlocks, data: &UnicodeData) -> std::io::Result<()> {
     let lib_file = PathBuf::from(GENERATED_CODE_DIR).join("lib.rs");
     let lib_content = blocks
-        .comments
+        .0
         .iter()
-        .map(move |line| {
-            if line.is_empty() {
-                String::from("///\n")
-            } else {
-                String::from("/// ") + &line + "\n"
-            }
-        })
-        .chain(blocks.blocks.iter().map(|block| {
+        .map(|block| {
             let characters = characters_in_range(&block.range, data);
-            String::from("\n")
+            String::new()
                 + generate_block_doc_comment(&block, &characters).as_str()
                 + "pub mod "
                 + block.as_snake_case().as_str()
-                + ";\n"
-        }))
-        .chain(std::iter::once(String::from("\n")))
+                + ";\n\n"
+        })
         .collect::<Vec<_>>();
     let binary_lib_content = lib_content
         .iter()
@@ -81,13 +73,13 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &Vec<UnicodeChar
     } else {
         block.range.end.to_string()
     };
-    let mut s = String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\n" + "///\n";
+    let mut s = String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\\\n" + "///\\\n";
     for chars in characters.chunks(16) {
         s += "///";
         for c in chars {
             s = s + " " + c.printable_character().as_str();
         }
-        s += "\n"
+        s += "\\\n"
     }
     s
 }
@@ -136,7 +128,7 @@ fn generate_block_files(blocks: &Vec<UnicodeBlock>, data: &UnicodeData) -> std::
 fn generate_unicode_types(blocks: &UnicodeBlocks, data: &UnicodeData) -> std::io::Result<()> {
     create_dir_all(GENERATED_CODE_DIR)?;
     generate_lib_rs(blocks, data)?;
-    generate_block_files(&blocks.blocks, data)
+    generate_block_files(&blocks.0, data)
 }
 
 fn main() {
