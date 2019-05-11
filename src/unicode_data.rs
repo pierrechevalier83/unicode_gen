@@ -13,10 +13,10 @@ pub struct UnicodeCharacter {
 impl UnicodeCharacter {
     // We assume a space-separated, all uppercase name
     pub fn as_upper_snake_case(&self) -> String {
-        self.name.replace(' ', "_").replace('-', "_")
+        self.name.replace(' ', "_").replace('-', "_DASH_")
     }
     pub fn as_upper_camel_case(&self) -> String {
-        let words = self.name.replace('-', " ");
+        let words = self.name.replace('-', "Dash");
         words
             .split(' ')
             .map(|word| {
@@ -59,6 +59,10 @@ impl UnicodeData {
                 if name == "" {
                     name = String::from("CONTROL ") + tokens[0];
                 }
+            } else if name.starts_with("<") {
+                name = name.replace('_', " ");
+                name.retain(|c| c != ',' && c != '<' && c != '>');
+                name = name.to_uppercase()
             }
             Some((index, UnicodeCharacter { character, name }))
         } else {
