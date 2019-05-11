@@ -10,7 +10,7 @@ mod unicode_data;
 
 const BLOCKS_FILE: &str = "Blocks.txt";
 const UNICODE_DATA_FILE: &str = "UnicodeData.txt";
-const GENERATED_CODE_DIR: &str = "unicode_types/src";
+const GENERATED_CODE_DIR: &str = "../unicode_types/src";
 
 #[derive(StructOpt)]
 struct Options {
@@ -23,9 +23,9 @@ struct Options {
     ucd_dir: PathBuf,
 }
 
-fn generate_mod_rs(blocks: &UnicodeBlocks) -> std::io::Result<()> {
-    let mod_file = PathBuf::from(GENERATED_CODE_DIR).join("mod.rs");
-    let mod_content = blocks
+fn generate_lib_rs(blocks: &UnicodeBlocks) -> std::io::Result<()> {
+    let lib_file = PathBuf::from(GENERATED_CODE_DIR).join("lib.rs");
+    let lib_content = blocks
         .comments
         .iter()
         .map(move |line| {
@@ -43,13 +43,13 @@ fn generate_mod_rs(blocks: &UnicodeBlocks) -> std::io::Result<()> {
         )
         .chain(std::iter::once(String::from("\n")))
         .collect::<Vec<_>>();
-    let binary_mod_content = mod_content
+    let binary_lib_content = lib_content
         .iter()
         .map(|s| s.bytes().collect::<Vec<_>>())
         .flatten()
         .collect::<Vec<_>>();
-    let mut file = File::create(mod_file)?;
-    file.write_all(&binary_mod_content)
+    let mut file = File::create(lib_file)?;
+    file.write_all(&binary_lib_content)
 }
 
 fn characters_in_range(range: &Range, data: &UnicodeData) -> Vec<UnicodeCharacter> {
@@ -70,18 +70,18 @@ fn generate_block_files(blocks: &Vec<UnicodeBlock>, data: &UnicodeData) -> std::
             content = content
                 + "    const "
                 + c.as_upper_snake_case().as_str()
-                + ": char = '"
-                + c.character.to_string().as_str()
-                + "';\n";
+                + ": char = "
+                + c.printable_character().as_str()
+                + ";\n";
         }
         content += "}";
         content = content + "\npub enum " + block.as_upper_camel_case().as_str() + " {\n";
 
         for c in characters {
             content = content
-                + "    /// '"
-                + c.character.to_string().as_str()
-                + "'\n"
+                + "    /// "
+                + c.printable_character().as_str()
+                + "\n"
                 + "    "
                 + c.as_upper_camel_case().as_str()
                 + ","
@@ -97,7 +97,7 @@ fn generate_block_files(blocks: &Vec<UnicodeBlock>, data: &UnicodeData) -> std::
 
 fn generate_unicode_types(blocks: &UnicodeBlocks, data: &UnicodeData) -> std::io::Result<()> {
     create_dir_all(GENERATED_CODE_DIR)?;
-    generate_mod_rs(blocks)?;
+    generate_lib_rs(blocks)?;
     generate_block_files(&blocks.blocks, data)
 }
 

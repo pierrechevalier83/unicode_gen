@@ -30,12 +30,41 @@ impl UnicodeCharacter {
             .flatten()
             .collect()
     }
+    pub fn printable_character(&self) -> String {
+        match self.character {
+            '\t' => "'\\t'".to_string(),
+            '\n' => "'\\n'".to_string(),
+            '\r' => "'\\r'".to_string(),
+            '\'' => "'\\''".to_string(),
+            '\\' => "'\\\\'".to_string(),
+            _ => String::from("'") + self.character.to_string().as_str() + "'",
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct UnicodeData(pub HashMap<u32, UnicodeCharacter>);
 
 impl UnicodeData {
+    fn from_line(line: &str) -> Option<(u32, UnicodeCharacter)> {
+        let tokens = line.split(';').collect::<Vec<_>>();
+        if !tokens.len() == 15 {
+            panic!("Expected 15 fields per character");
+        }
+        let index = u32::from_str_radix(tokens[0], 16).expect("Fail");
+        if let Ok(character) = char::try_from(index) {
+            let mut name = tokens[1].to_string();
+            if name == "<control>" {
+                name = tokens[11].to_string();
+                if name == "" {
+                    name = String::from("CONTROL ") + tokens[0];
+                }
+            }
+            Some((index, UnicodeCharacter { character, name }))
+        } else {
+            None
+        }
+    }
     pub fn from_file(path: PathBuf) -> Result<Self, std::io::Error> {
         let mut file = File::open(&path)?;
         let mut contents = String::new();
@@ -43,19 +72,7 @@ impl UnicodeData {
         Ok(UnicodeData(
             contents
                 .lines()
-                .flat_map(|line| {
-                    let tokens = line.split(';').collect::<Vec<_>>();
-                    if !tokens.len() == 15 {
-                        panic!("Expected 15 fields per character");
-                    }
-                    let index = u32::from_str_radix(tokens[0], 16).expect("Fail");
-                    if let Ok(character) = char::try_from(index) {
-                        let name = tokens[1].to_string();
-                        Some((index, UnicodeCharacter { character, name }))
-                    } else {
-                        None
-                    }
-                })
+                .flat_map(|line| Self::from_line(line))
                 .collect(),
         ))
     }
