@@ -4,13 +4,13 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Range {
-    begin: u32,
-    end: u32,
+    pub begin: u32,
+    pub end: u32,
 }
 
 #[derive(Debug)]
 pub struct UnicodeBlock {
-    range: Range,
+    pub range: Range,
     name: String,
 }
 
@@ -43,7 +43,6 @@ impl UnicodeBlocks {
             .filter(|line| !line.contains("EOF"))
             .map(|line| {
                 let mut line = line.to_string();
-                println!("line: \"{}\"", line);
                 if line.remove(0) != '#' {
                     panic!("Unrecognized syntax in \"Blocks\" comment");
                 }
