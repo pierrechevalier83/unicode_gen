@@ -114,6 +114,7 @@ fn generate_block_files(
         let filename = block.as_snake_case() + ".rs";
         let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
+        // constants
         let mut content = generate_block_doc_comment(&block, &characters);
 
         content += "pub mod constants {\n";
@@ -127,6 +128,7 @@ fn generate_block_files(
                 + "';\n";
         }
         content += "}\n";
+        // enum
         content = content
             + "\n"
             + generate_block_doc_comment(&block, &characters).as_str()
@@ -134,7 +136,7 @@ fn generate_block_files(
             + block.as_upper_camel_case().as_str()
             + " {\n";
 
-        for c in characters {
+        for c in &characters {
             content = content
                 + generate_char_doc_comment(&c).as_str()
                 + "    "
@@ -143,6 +145,28 @@ fn generate_block_files(
                 + "\n";
         }
         content += "}\n";
+        // Into<char>
+        content = content
+            + "\n"
+            + "impl Into<char> for "
+            + block.as_upper_camel_case().as_str()
+            + " {\n"
+            + "    fn into(self) -> char {
+        use constants::*;
+        match self {
+";
+        for c in characters {
+            content = content
+                + "            "
+                + block.as_upper_camel_case().as_str()
+                + "::"
+                + c.as_upper_camel_case().as_str()
+                + " => "
+                + c.as_upper_snake_case().as_str()
+                + ",\n";
+        }
+        content = content + "        }\n" + "    }\n" + "}\n";
+        // TryFrom<char>
 
         let mut file = File::create(file)?;
         file.write_all(&content.bytes().collect::<Vec<_>>())?;
