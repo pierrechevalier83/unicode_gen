@@ -11,7 +11,6 @@ mod unicode_data;
 
 const BLOCKS_FILE: &str = "Blocks.txt";
 const UNICODE_DATA_FILE: &str = "UnicodeData.txt";
-const GENERATED_CODE_DIR: &str = "../unicode_types/src";
 
 #[derive(StructOpt)]
 struct Options {
@@ -22,10 +21,17 @@ struct Options {
     /// https://www.unicode.org/Public/UCD/latest/ucd/UCD.zip
     #[structopt(long = "ucd_dir", short = "d")]
     ucd_dir: PathBuf,
+    /// Directory where to generate the code
+    #[structopt(long = "out_dir", short = "o")]
+    out_dir: PathBuf,
 }
 
-fn generate_lib_rs(blocks: &UnicodeBlocks, data: &UnicodeData) -> std::io::Result<()> {
-    let lib_file = PathBuf::from(GENERATED_CODE_DIR).join("lib.rs");
+fn generate_lib_rs(
+    blocks: &UnicodeBlocks,
+    data: &UnicodeData,
+    out_dir: &PathBuf,
+) -> std::io::Result<()> {
+    let lib_file = PathBuf::from(out_dir).join("lib.rs");
     let lib_content = blocks
         .0
         .iter()
@@ -84,10 +90,14 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &Vec<UnicodeChar
     s
 }
 
-fn generate_block_files(blocks: &Vec<UnicodeBlock>, data: &UnicodeData) -> std::io::Result<()> {
+fn generate_block_files(
+    blocks: &Vec<UnicodeBlock>,
+    data: &UnicodeData,
+    out_dir: &PathBuf,
+) -> std::io::Result<()> {
     for block in blocks {
         let filename = block.as_snake_case() + ".rs";
-        let file = PathBuf::from(GENERATED_CODE_DIR).join(filename);
+        let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
         let mut content = generate_block_doc_comment(&block, &characters);
 
@@ -125,10 +135,14 @@ fn generate_block_files(blocks: &Vec<UnicodeBlock>, data: &UnicodeData) -> std::
     Ok(())
 }
 
-fn generate_unicode_types(blocks: &UnicodeBlocks, data: &UnicodeData) -> std::io::Result<()> {
-    create_dir_all(GENERATED_CODE_DIR)?;
-    generate_lib_rs(blocks, data)?;
-    generate_block_files(&blocks.0, data)
+fn generate_unicode_types(
+    blocks: &UnicodeBlocks,
+    data: &UnicodeData,
+    out_dir: &PathBuf,
+) -> std::io::Result<()> {
+    create_dir_all(out_dir)?;
+    generate_lib_rs(blocks, data, out_dir)?;
+    generate_block_files(&blocks.0, data, out_dir)
 }
 
 fn main() {
@@ -137,5 +151,6 @@ fn main() {
     let blocks = UnicodeBlocks::from_file(blocks_file).expect("Parse Error");
     let data_file = options.ucd_dir.join(UNICODE_DATA_FILE);
     let data = UnicodeData::from_file(data_file).expect("Parse Error");
-    generate_unicode_types(&blocks, &data).expect("Error generating code");
+    let out_dir = options.out_dir;
+    generate_unicode_types(&blocks, &data, &out_dir).expect("Error generating code");
 }
