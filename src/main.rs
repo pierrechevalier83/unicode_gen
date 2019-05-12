@@ -40,8 +40,12 @@ fn generate_mod_rs(
             String::new()
                 + generate_block_doc_comment(&block, &characters).as_str()
                 + "pub mod "
-                + block.as_snake_case().as_str()
-                + ";\n\n"
+                + block.as_mod_name().as_str()
+                + ";\n"
+                + "pub use "
+                + block.as_mod_name().as_str()
+                + "::*;\n"
+                + "\n"
         })
         .collect::<Vec<_>>();
     let binary_lib_content = lib_content
@@ -263,7 +267,7 @@ fn generate_block_files(
     out_dir: &PathBuf,
 ) -> std::io::Result<()> {
     for block in blocks {
-        let filename = block.as_snake_case() + ".rs";
+        let filename = block.as_mod_name() + ".rs";
         let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
         let mut content = String::new();

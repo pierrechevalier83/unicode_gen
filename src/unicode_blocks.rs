@@ -23,8 +23,17 @@ impl UnicodeBlock {
         upper_camel_case.retain(|c| c != ' ' && c != '-');
         upper_camel_case
     }
-    pub fn as_snake_case(&self) -> String {
+    fn as_snake_case(&self) -> String {
         self.name.replace(' ', "_").replace('-', "_").to_lowercase()
+    }
+    pub fn as_mod_name(&self) -> String {
+        format!(
+            "block_{:#08x?}_{:#08x?}_{}",
+            self.range.begin,
+            self.range.end,
+            self.as_snake_case(),
+        )
+        .replace("0x", "")
     }
 }
 
