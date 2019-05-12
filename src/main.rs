@@ -28,16 +28,17 @@ struct Options {
 
 fn generate_mod_rs(blocks: &UnicodeBlocks, out_dir: &PathBuf) -> std::io::Result<()> {
     let lib_file = PathBuf::from(out_dir).join("mod.rs");
-    let lib_content = blocks
-        .0
-        .iter()
-        .map(|block| {
+    let doc = String::from(
+        "/// Unicode characters, grouped by enums which represent one unicode block each.\n",
+    ) + "/// Each variant of these enums uniquely identifies once unicode character.\n\n";
+    let lib_content = std::iter::once(doc)
+        .chain(blocks.0.iter().map(|block| {
             String::new()
                 + generate_block_range_comment(&block).as_str()
                 + "pub mod "
                 + block.as_snake_case().as_str()
                 + ";\n\n"
-        })
+        }))
         .collect::<Vec<_>>();
     let binary_lib_content = lib_content
         .iter()
@@ -72,11 +73,11 @@ fn generate_block_range_comment(block: &UnicodeBlock) -> String {
         .unwrap()
         .escape_unicode()
         .to_string();
-    String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\\\n" + "///\\\n"
+    String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\n"
 }
 
 fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
-    let mut s = generate_block_range_comment(block);
+    let mut s = generate_block_range_comment(block) + "///\n";
     for chars in characters.chunks(16) {
         s += "///";
         for c in chars {
