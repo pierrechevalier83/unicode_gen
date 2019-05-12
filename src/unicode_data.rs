@@ -16,7 +16,7 @@ impl UnicodeCharacter {
         self.name.replace(' ', "_").replace('-', "_DASH_")
     }
     pub fn as_upper_camel_case(&self) -> String {
-        let words = self.name.replace('-', "Dash");
+        let words = self.name.replace('-', " Dash ");
         words
             .split(' ')
             .map(|word| {
