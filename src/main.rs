@@ -95,7 +95,7 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharact
 fn generate_block_constants(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
     let mut content =
         String::from("/// A number of constants to give a name to all characters in this block.\n");
-    content += "pub mod constants {\n";
+    content += "mod constants {\n";
     for c in characters {
         content = content
             + generate_char_doc_comment(&c).as_str()
