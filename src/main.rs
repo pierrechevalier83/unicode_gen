@@ -95,7 +95,7 @@ fn generate_block_constants(block: &UnicodeBlock, characters: &[UnicodeCharacter
         content = content
             + generate_char_doc_comment(&c).as_str()
             + "    pub const "
-            + c.as_upper_snake_case().as_str()
+            + c.as_const_name(block.as_snake_case().as_str()).as_str()
             + ": char = '"
             + c.printable_character().as_str()
             + "';\n";
@@ -145,7 +145,7 @@ fn generate_block_into_char(block: &UnicodeBlock, characters: &[UnicodeCharacter
             + c.as_enum_variant(block.as_upper_camel_case().as_str())
                 .as_str()
             + " => "
-            + c.as_upper_snake_case().as_str()
+            + c.as_const_name(block.as_snake_case().as_str()).as_str()
             + ",\n";
     }
     content = content + "        }\n" + "    }\n" + "}\n";
@@ -166,7 +166,7 @@ fn generate_block_try_from_char(block: &UnicodeBlock, characters: &[UnicodeChara
     for c in characters {
         content = content
             + "            "
-            + c.as_upper_snake_case().as_str()
+            + c.as_const_name(block.as_snake_case().as_str()).as_str()
             + " => Ok("
             + block.as_upper_camel_case().as_str()
             + "::"

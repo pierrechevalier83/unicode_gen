@@ -11,11 +11,16 @@ pub struct UnicodeCharacter {
 }
 
 impl UnicodeCharacter {
-    // We assume a space-separated, all uppercase name
-    pub fn as_upper_snake_case(&self) -> String {
+    fn as_upper_snake_case(&self) -> String {
         self.name.replace(' ', "_").replace('-', "_DASH_")
     }
-    pub fn as_upper_camel_case(&self) -> String {
+    // We assume a space-separated, all uppercase name
+    pub fn as_const_name(&self, mod_name: &str) -> String {
+        // Don't repeat the mod name in the const name
+        self.as_upper_snake_case()
+            .replace((mod_name.to_uppercase() + "_").as_str(), "")
+    }
+    fn as_upper_camel_case(&self) -> String {
         let words = self.name.replace('-', " Dash ");
         words
             .split(' ')
@@ -31,12 +36,7 @@ impl UnicodeCharacter {
             .collect()
     }
     pub fn as_enum_variant(&self, enum_name: &str) -> String {
-        // Working around inconsistency in the data (#dirtyhack ;-))
-        let enum_name = if enum_name == "BoxDrawing" {
-            "BoxDrawings"
-        } else {
-            enum_name
-        };
+        // Don't repeat the enum name in the variant
         self.as_upper_camel_case().replace(enum_name, "")
     }
     pub fn as_pretty_name(&self) -> String {
@@ -75,6 +75,11 @@ impl UnicodeData {
                 name = name.replace('_', " ");
                 name.retain(|c| c != ',' && c != '<' && c != '>');
                 name = name.to_uppercase()
+            } else if name.starts_with("BOX DRAWINGS") {
+                // The raw data is inconsitent as the block is called
+                // Box Drawing, but the characters are called BOX DRAWINGS...
+                // Go for consistency over perfect accuracy to statisfy my OCD
+                name = name.replace("BOX DRAWINGS", "BOX DRAWING");
             }
             Some((index, UnicodeCharacter { character, name }))
         } else {
