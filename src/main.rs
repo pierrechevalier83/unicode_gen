@@ -11,23 +11,6 @@ mod unicode_data;
 
 const BLOCKS_FILE: &str = "Blocks.txt";
 const UNICODE_DATA_FILE: &str = "UnicodeData.txt";
-const TOP_LEVEL_COMMENT: &str = "/// Unicode Character Database
-/// Date: 2019-04-29, 23:54:00 GMT [KW]
-/// © 2019 Unicode®, Inc.
-/// Unicode and the Unicode Logo are registered trademarks of Unicode,
-/// Inc. in the U.S. and other countries.
-/// For terms of use, see http://www.unicode.org/terms_of_use.html
-///
-/// Mapping of all unicode characters to rust types.
-///
-/// This mapping was automatically generated from the latest Unicode
-/// Character Database by the `unicode_gen` crate.
-///
-/// Each unicode Block is represented by a module of the appropriate name.
-/// In this module, one module named constants contains a constant for each
-/// character litteral in the block.
-/// In addition to this, an enum represents the block and each character
-/// is represented by a variant of this enum.\n\n";
 
 #[derive(StructOpt)]
 struct Options {
@@ -49,15 +32,17 @@ fn generate_mod_rs(
     out_dir: &PathBuf,
 ) -> std::io::Result<()> {
     let lib_file = PathBuf::from(out_dir).join("mod.rs");
-    let lib_content = std::iter::once(String::from(TOP_LEVEL_COMMENT))
-        .chain(blocks.0.iter().map(|block| {
+    let lib_content = blocks
+        .0
+        .iter()
+        .map(|block| {
             let characters = characters_in_range(&block.range, data);
             String::new()
                 + generate_block_doc_comment(&block, &characters).as_str()
                 + "pub mod "
                 + block.as_snake_case().as_str()
                 + ";\n\n"
-        }))
+        })
         .collect::<Vec<_>>();
     let binary_lib_content = lib_content
         .iter()
@@ -132,7 +117,7 @@ fn generate_block_files(
         content = content
             + "\n"
             + generate_block_doc_comment(&block, &characters).as_str()
-            + "#[derive(Debug, Clone, Copy, PartialEq, Eq)]\n"
+            + "#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]\n"
             + "pub enum "
             + block.as_upper_camel_case().as_str()
             + " {\n";
@@ -231,7 +216,23 @@ fn generate_block_files(
             + "        Self::try_from(index + 1).ok()\n"
             + "    }\n"
             + "}\n";
-
+        // new
+        if !characters.is_empty() {
+            content = content
+                + "\n"
+                + "impl "
+                + block.as_upper_camel_case().as_str()
+                + " {\n"
+                + "    /// The character with the lowest index this unicode block\n"
+                + "    pub fn new() -> Self {\n"
+                + "        "
+                + block.as_upper_camel_case().as_str()
+                + "::"
+                + characters[0].as_upper_camel_case().as_str()
+                + "\n"
+                + "    }\n"
+                + "}\n";
+        }
         let mut file = File::create(file)?;
         file.write_all(&content.bytes().collect::<Vec<_>>())?;
     }
