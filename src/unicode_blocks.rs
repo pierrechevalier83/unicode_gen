@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
@@ -31,7 +32,7 @@ impl UnicodeBlock {
 pub struct UnicodeBlocks(pub Vec<UnicodeBlock>);
 
 impl UnicodeBlocks {
-    fn parse_block(line: &&str) -> UnicodeBlock {
+    fn parse_block(line: &&str) -> Option<UnicodeBlock> {
         let tokens = line.split(';').collect::<Vec<_>>();
         if !tokens.len() == 2 {
             panic!("Unrecognized syntax in \"Blocks\" block line");
@@ -40,17 +41,22 @@ impl UnicodeBlocks {
         if !range.len() == 2 {
             panic!("Unrecognized syntax in \"Blocks\" block line");
         }
-        UnicodeBlock {
-            range: Range {
-                begin: u32::from_str_radix(range[0], 16).expect("Fail"),
-                end: u32::from_str_radix(range[1], 16).expect("Fail"),
-            },
-            name: tokens[1].trim().to_string(),
+        let range = Range {
+            begin: u32::from_str_radix(range[0], 16).expect("Fail"),
+            end: u32::from_str_radix(range[1], 16).expect("Fail"),
+        };
+        if char::try_from(range.begin).is_ok() {
+            Some(UnicodeBlock {
+                range,
+                name: tokens[1].trim().to_string(),
+            })
+        } else {
+            None
         }
     }
     /// Parse block lines from Blocks file
     fn parse_blocks(lines: &[&str]) -> Vec<UnicodeBlock> {
-        lines.into_iter().map(Self::parse_block).collect()
+        lines.into_iter().flat_map(Self::parse_block).collect()
     }
     /// Parse the unicode blocks file into Self
     pub fn from_file(path: PathBuf) -> Result<Self, std::io::Error> {

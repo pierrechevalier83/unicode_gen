@@ -69,23 +69,21 @@ fn generate_char_doc_comment(c: &UnicodeCharacter) -> String {
 }
 
 fn generate_block_doc_comment(block: &UnicodeBlock, characters: &Vec<UnicodeCharacter>) -> String {
-    let begin = if let Ok(begin) = char::try_from(block.range.begin) {
-        begin.escape_unicode().to_string()
-    } else {
-        block.range.begin.to_string()
-    };
-    let end = if let Ok(end) = char::try_from(block.range.end) {
-        end.escape_unicode().to_string()
-    } else {
-        block.range.end.to_string()
-    };
+    let begin = char::try_from(block.range.begin)
+        .unwrap()
+        .escape_unicode()
+        .to_string();
+    let end = char::try_from(block.range.end)
+        .unwrap()
+        .escape_unicode()
+        .to_string();
     let mut s = String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\\\n" + "///\\\n";
     for chars in characters.chunks(16) {
         s += "///";
         for c in chars {
             s = s + " " + c.printable_character().as_str();
         }
-        s += "\\\n"
+        s += "\n"
     }
     s
 }
@@ -233,6 +231,16 @@ fn generate_block_files(
                 + "    }\n"
                 + "}\n";
         }
+        // name
+        /*
+            pub fn name(&self) -> &str {
+                match self {
+                    BoxDrawing::BoxDrawingsLightHorizontal => "box drawings light horizontal",
+                    _ => "",
+                }
+            }
+
+        */
         let mut file = File::create(file)?;
         file.write_all(&content.bytes().collect::<Vec<_>>())?;
     }
