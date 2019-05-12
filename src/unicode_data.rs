@@ -30,6 +30,9 @@ impl UnicodeCharacter {
             .flatten()
             .collect()
     }
+    pub fn as_pretty_name(&self) -> String {
+        self.name.to_lowercase()
+    }
     pub fn printable_character(&self) -> String {
         match self.character {
             '\t' => "\\t".to_string(),

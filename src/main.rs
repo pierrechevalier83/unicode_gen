@@ -68,7 +68,7 @@ fn generate_char_doc_comment(c: &UnicodeCharacter) -> String {
         + "'\n"
 }
 
-fn generate_block_doc_comment(block: &UnicodeBlock, characters: &Vec<UnicodeCharacter>) -> String {
+fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
     let begin = char::try_from(block.range.begin)
         .unwrap()
         .escape_unicode()
@@ -88,6 +88,185 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &Vec<UnicodeChar
     s
 }
 
+fn generate_block_constants(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+    let mut content = generate_block_doc_comment(&block, &characters);
+    content += "pub mod constants {\n";
+    for c in characters {
+        content = content
+            + generate_char_doc_comment(&c).as_str()
+            + "    pub const "
+            + c.as_upper_snake_case().as_str()
+            + ": char = '"
+            + c.printable_character().as_str()
+            + "';\n";
+    }
+    content += "}\n";
+    content
+}
+
+fn generate_block_enum(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+    let mut content = String::new();
+    content = content
+        + "\n"
+        + generate_block_doc_comment(&block, &characters).as_str()
+        + "#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]\n"
+        + "pub enum "
+        + block.as_upper_camel_case().as_str()
+        + " {\n";
+
+    for c in characters {
+        content = content
+            + generate_char_doc_comment(&c).as_str()
+            + "    "
+            + c.as_upper_camel_case().as_str()
+            + ","
+            + "\n";
+    }
+    content += "}\n";
+    content
+}
+
+fn generate_block_into_char(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+    let mut content = String::new();
+    content = content
+        + "\n"
+        + "impl Into<char> for "
+        + block.as_upper_camel_case().as_str()
+        + " {\n"
+        + "    fn into(self) -> char {\n"
+        + "        use constants::*;\n"
+        + "        match self {\n";
+    for c in characters {
+        content = content
+            + "            "
+            + block.as_upper_camel_case().as_str()
+            + "::"
+            + c.as_upper_camel_case().as_str()
+            + " => "
+            + c.as_upper_snake_case().as_str()
+            + ",\n";
+    }
+    content = content + "        }\n" + "    }\n" + "}\n";
+    content
+}
+
+fn generate_block_try_from_char(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+    let mut content = String::new();
+    content = content
+        + "\n"
+        + "impl std::convert::TryFrom<char> for "
+        + block.as_upper_camel_case().as_str()
+        + " {\n"
+        + "    type Error = ();\n"
+        + "    fn try_from(c: char) -> Result<Self, Self::Error> {\n"
+        + "        use constants::*;\n"
+        + "        match c {\n";
+    for c in characters {
+        content = content
+            + "            "
+            + c.as_upper_snake_case().as_str()
+            + " => Ok("
+            + block.as_upper_camel_case().as_str()
+            + "::"
+            + c.as_upper_camel_case().as_str()
+            + "),\n";
+    }
+    content = content + "            _ => Err(()),\n" + "        }\n" + "    }\n" + "}\n";
+    content
+}
+
+fn generate_block_into_u32(block: &UnicodeBlock) -> String {
+    let mut content = String::new();
+    content = content
+        + "\n"
+        + "impl Into<u32> for "
+        + block.as_upper_camel_case().as_str()
+        + " {\n"
+        + "    fn into(self) -> u32 {\n"
+        + "        let c: char = self.into();\n"
+        + "        let hex = c\n"
+        + "            .escape_unicode()\n"
+        + "            .to_string()\n"
+        + "            .replace(\"\\\\u{\", \"\")\n"
+        + "            .replace(\"}\", \"\");\n"
+        + "        u32::from_str_radix(&hex, 16).unwrap()\n"
+        + "    }\n"
+        + "}\n";
+    content
+}
+
+fn generate_block_try_from_u32(block: &UnicodeBlock) -> String {
+    let mut content = String::new();
+    content = content
+        + "\n"
+        + "impl std::convert::TryFrom<u32> for "
+        + block.as_upper_camel_case().as_str()
+        + " {\n"
+        + "    type Error = ();\n"
+        + "    fn try_from(u: u32) -> Result<Self, Self::Error> {\n"
+        + "        if let Ok(c) = char::try_from(u) {\n"
+        + "            Self::try_from(c)\n"
+        + "        } else {\n"
+        + "            Err(())\n"
+        + "        }\n"
+        + "    }\n"
+        + "}\n";
+    content
+}
+
+fn generate_block_iterator(block: &UnicodeBlock) -> String {
+    let mut content = String::new();
+    content = content
+        + "\n"
+        + "impl Iterator for "
+        + block.as_upper_camel_case().as_str()
+        + " {\n"
+        + "    type Item = Self;\n"
+        + "    fn next(&mut self) -> Option<Self> {\n"
+        + "        let index: u32 = (*self).into();\n"
+        + "        use std::convert::TryFrom;\n"
+        + "        Self::try_from(index + 1).ok()\n"
+        + "    }\n"
+        + "}\n";
+    content
+}
+
+fn generate_block_enum_impl(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+    let mut content = String::new();
+    content = content + "\n" + "impl " + block.as_upper_camel_case().as_str() + " {\n";
+    // new
+    content = content
+        + "    /// The character with the lowest index this unicode block\n"
+        + "    pub fn new() -> Self {\n"
+        + "        "
+        + block.as_upper_camel_case().as_str()
+        + "::"
+        + characters[0].as_upper_camel_case().as_str()
+        + "\n"
+        + "    }\n";
+    // name
+    content = content
+        + "\n"
+        + "    /// The character's name, all lowercase and space-separated\n"
+        + "    pub fn name(&self) -> &str {\n"
+        + "        match self {\n";
+    for c in characters {
+        content = content
+            + "            "
+            + block.as_upper_camel_case().as_str()
+            + "::"
+            + c.as_upper_camel_case().as_str()
+            + " => \""
+            + c.as_pretty_name().as_str()
+            + "\",\n";
+    }
+    content = content + "            _ => \"\",\n" + "        }\n" + "    }\n";
+    // end impl
+    content = content + "}\n";
+
+    content
+}
+
 fn generate_block_files(
     blocks: &Vec<UnicodeBlock>,
     data: &UnicodeData,
@@ -97,150 +276,24 @@ fn generate_block_files(
         let filename = block.as_snake_case() + ".rs";
         let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
+        let mut content = String::new();
         // constants
-        let mut content = generate_block_doc_comment(&block, &characters);
-
-        content += "pub mod constants {\n";
-        for c in &characters {
-            content = content
-                + generate_char_doc_comment(&c).as_str()
-                + "    pub const "
-                + c.as_upper_snake_case().as_str()
-                + ": char = '"
-                + c.printable_character().as_str()
-                + "';\n";
-        }
-        content += "}\n";
+        content += generate_block_constants(&block, &characters).as_str();
         // enum
-        content = content
-            + "\n"
-            + generate_block_doc_comment(&block, &characters).as_str()
-            + "#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]\n"
-            + "pub enum "
-            + block.as_upper_camel_case().as_str()
-            + " {\n";
-
-        for c in &characters {
-            content = content
-                + generate_char_doc_comment(&c).as_str()
-                + "    "
-                + c.as_upper_camel_case().as_str()
-                + ","
-                + "\n";
-        }
-        content += "}\n";
+        content += generate_block_enum(&block, &characters).as_str();
         // Into<char>
-        content = content
-            + "\n"
-            + "impl Into<char> for "
-            + block.as_upper_camel_case().as_str()
-            + " {\n"
-            + "    fn into(self) -> char {\n"
-            + "        use constants::*;\n"
-            + "        match self {\n";
-        for c in &characters {
-            content = content
-                + "            "
-                + block.as_upper_camel_case().as_str()
-                + "::"
-                + c.as_upper_camel_case().as_str()
-                + " => "
-                + c.as_upper_snake_case().as_str()
-                + ",\n";
-        }
-        content = content + "        }\n" + "    }\n" + "}\n";
+        content += generate_block_into_char(&block, &characters).as_str();
         // TryFrom<char>
-        content = content
-            + "\n"
-            + "impl std::convert::TryFrom<char> for "
-            + block.as_upper_camel_case().as_str()
-            + " {\n"
-            + "    type Error = ();\n"
-            + "    fn try_from(c: char) -> Result<Self, Self::Error> {\n"
-            + "        use constants::*;\n"
-            + "        match c {\n";
-        for c in &characters {
-            content = content
-                + "            "
-                + c.as_upper_snake_case().as_str()
-                + " => Ok("
-                + block.as_upper_camel_case().as_str()
-                + "::"
-                + c.as_upper_camel_case().as_str()
-                + "),\n";
-        }
-        content = content + "            _ => Err(()),\n" + "        }\n" + "    }\n" + "}\n";
+        content += generate_block_try_from_char(&block, &characters).as_str();
         // Into<u32>
-        content = content
-            + "\n"
-            + "impl Into<u32> for "
-            + block.as_upper_camel_case().as_str()
-            + " {\n"
-            + "    fn into(self) -> u32 {\n"
-            + "        let c: char = self.into();\n"
-            + "        let hex = c\n"
-            + "            .escape_unicode()\n"
-            + "            .to_string()\n"
-            + "            .replace(\"\\\\u{\", \"\")\n"
-            + "            .replace(\"}\", \"\");\n"
-            + "        u32::from_str_radix(&hex, 16).unwrap()\n"
-            + "    }\n"
-            + "}\n";
+        content += generate_block_into_u32(&block).as_str();
         // TryFrom<u32>
-        content = content
-            + "\n"
-            + "impl std::convert::TryFrom<u32> for "
-            + block.as_upper_camel_case().as_str()
-            + " {\n"
-            + "    type Error = ();\n"
-            + "    fn try_from(u: u32) -> Result<Self, Self::Error> {\n"
-            + "        if let Ok(c) = char::try_from(u) {\n"
-            + "            Self::try_from(c)\n"
-            + "        } else {\n"
-            + "            Err(())\n"
-            + "        }\n"
-            + "    }\n"
-            + "}\n";
+        content += generate_block_try_from_u32(&block).as_str();
         // Iterator
-        content = content
-            + "\n"
-            + "impl Iterator for "
-            + block.as_upper_camel_case().as_str()
-            + " {\n"
-            + "    type Item = Self;\n"
-            + "    fn next(&mut self) -> Option<Self> {\n"
-            + "        let index: u32 = (*self).into();\n"
-            + "        use std::convert::TryFrom;\n"
-            + "        Self::try_from(index + 1).ok()\n"
-            + "    }\n"
-            + "}\n";
-        // new
-        if !characters.is_empty() {
-            content = content
-                + "\n"
-                + "impl "
-                + block.as_upper_camel_case().as_str()
-                + " {\n"
-                + "    /// The character with the lowest index this unicode block\n"
-                + "    pub fn new() -> Self {\n"
-                + "        "
-                + block.as_upper_camel_case().as_str()
-                + "::"
-                + characters[0].as_upper_camel_case().as_str()
-                + "\n"
-                + "    }\n"
-                + "}\n";
-        }
-        // name
-        /*
-            pub fn name(&self) -> &str {
-                match self {
-                    BoxDrawing::BoxDrawingsLightHorizontal => "box drawings light horizontal",
-                    _ => "",
-                }
-            }
+        content += generate_block_iterator(&block).as_str();
+        // impl
+        content += generate_block_enum_impl(&block, &characters).as_str();
 
-        */
         let mut file = File::create(file)?;
         file.write_all(&content.bytes().collect::<Vec<_>>())?;
     }
