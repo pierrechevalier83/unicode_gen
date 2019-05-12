@@ -132,6 +132,7 @@ fn generate_block_files(
         content = content
             + "\n"
             + generate_block_doc_comment(&block, &characters).as_str()
+            + "#[derive(Debug, Clone, Copy, PartialEq, Eq)]\n"
             + "pub enum "
             + block.as_upper_camel_case().as_str()
             + " {\n";
@@ -151,11 +152,10 @@ fn generate_block_files(
             + "impl Into<char> for "
             + block.as_upper_camel_case().as_str()
             + " {\n"
-            + "    fn into(self) -> char {
-        use constants::*;
-        match self {
-";
-        for c in characters {
+            + "    fn into(self) -> char {\n"
+            + "        use constants::*;\n"
+            + "        match self {\n";
+        for c in &characters {
             content = content
                 + "            "
                 + block.as_upper_camel_case().as_str()
@@ -167,7 +167,27 @@ fn generate_block_files(
         }
         content = content + "        }\n" + "    }\n" + "}\n";
         // TryFrom<char>
+        content = content
+            + "\n"
+            + "impl std::convert::TryFrom<char> for "
+            + block.as_upper_camel_case().as_str()
+            + " {\n"
+            + "    type Error = ();\n"
+            + "    fn try_from(c: char) -> Result<Self, Self::Error> {\n"
+            + "        use constants::*;\n"
+            + "        match c {\n";
+        for c in &characters {
+            content = content
+                + "            "
+                + c.as_upper_snake_case().as_str()
+                + " => Ok("
+                + block.as_upper_camel_case().as_str()
+                + "::"
+                + c.as_upper_camel_case().as_str()
+                + "),\n";
+        }
 
+        content = content + "            _ => Err(()),\n" + "        }\n" + "    }\n" + "}\n";
         let mut file = File::create(file)?;
         file.write_all(&content.bytes().collect::<Vec<_>>())?;
     }
