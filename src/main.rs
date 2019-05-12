@@ -244,21 +244,13 @@ fn generate_block_enum_impl(block: &UnicodeBlock, characters: &[UnicodeCharacter
     // name
     content = content
         + "\n"
-        + "    /// The character's name, all lowercase and space-separated\n"
-        + "    pub fn name(&self) -> &str {\n"
-        + "        match self {\n";
-    for c in characters {
-        content = content
-            + "            "
-            + block.as_upper_camel_case().as_str()
-            + "::"
-            + c.as_enum_variant(block.as_upper_camel_case().as_str())
-                .as_str()
-            + " => \""
-            + c.as_pretty_name().as_str()
-            + "\",\n";
-    }
-    content = content + "        }\n" + "    }\n";
+        + "    /// The character's name, in sentence case\n"
+        + "    pub fn name(&self) -> String {\n"
+        + "        let s = std::format!(\""
+        + block.as_upper_camel_case().as_str()
+        + "{:#?}\", self);\n"
+        + "        string_morph::to_sentence_case(&s)\n"
+        + "    }\n";
     // end impl
     content = content + "}\n";
 
