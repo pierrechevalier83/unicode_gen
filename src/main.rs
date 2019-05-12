@@ -92,23 +92,6 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharact
     s
 }
 
-fn generate_block_constants(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
-    let mut content =
-        String::from("/// A number of constants to give a name to all characters in this block.\n");
-    content += "mod constants {\n";
-    for c in characters {
-        content = content
-            + generate_char_doc_comment(&c).as_str()
-            + "    pub const "
-            + c.as_const_name(block.as_snake_case().as_str()).as_str()
-            + ": char = '"
-            + c.printable_character().as_str()
-            + "';\n";
-    }
-    content += "}\n";
-    content
-}
-
 fn generate_block_enum(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
     let mut content = String::new();
     content = content
@@ -142,7 +125,6 @@ fn generate_block_into_char(block: &UnicodeBlock, characters: &[UnicodeCharacter
         + block.as_upper_camel_case().as_str()
         + " {\n"
         + "    fn into(self) -> char {\n"
-        + "        use constants::*;\n"
         + "        match self {\n";
     for c in characters {
         content = content
@@ -152,7 +134,9 @@ fn generate_block_into_char(block: &UnicodeBlock, characters: &[UnicodeCharacter
             + c.as_enum_variant(block.as_upper_camel_case().as_str())
                 .as_str()
             + " => "
-            + c.as_const_name(block.as_snake_case().as_str()).as_str()
+            + "'"
+            + c.printable_character().as_str()
+            + "'"
             + ",\n";
     }
     content = content + "        }\n" + "    }\n" + "}\n";
@@ -168,12 +152,13 @@ fn generate_block_try_from_char(block: &UnicodeBlock, characters: &[UnicodeChara
         + " {\n"
         + "    type Error = ();\n"
         + "    fn try_from(c: char) -> Result<Self, Self::Error> {\n"
-        + "        use constants::*;\n"
         + "        match c {\n";
     for c in characters {
         content = content
             + "            "
-            + c.as_const_name(block.as_snake_case().as_str()).as_str()
+            + "'"
+            + c.printable_character().as_str()
+            + "'"
             + " => Ok("
             + block.as_upper_camel_case().as_str()
             + "::"
@@ -290,8 +275,6 @@ fn generate_block_files(
         let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
         let mut content = String::new();
-        // constants
-        content += generate_block_constants(&block, &characters).as_str();
         // enum
         content += generate_block_enum(&block, &characters).as_str();
         // Into<char>

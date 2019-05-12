@@ -11,15 +11,7 @@ pub struct UnicodeCharacter {
 }
 
 impl UnicodeCharacter {
-    fn as_upper_snake_case(&self) -> String {
-        self.name.replace(' ', "_").replace('-', "_DASH_")
-    }
     // We assume a space-separated, all uppercase name
-    pub fn as_const_name(&self, mod_name: &str) -> String {
-        // Don't repeat the mod name in the const name
-        self.as_upper_snake_case()
-            .replace((mod_name.to_uppercase() + "_").as_str(), "")
-    }
     fn as_upper_camel_case(&self) -> String {
         let words = self.name.replace('-', " Dash ");
         words
