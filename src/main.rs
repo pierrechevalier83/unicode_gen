@@ -118,7 +118,8 @@ fn generate_block_enum(block: &UnicodeBlock, characters: &[UnicodeCharacter]) ->
         content = content
             + generate_char_doc_comment(&c).as_str()
             + "    "
-            + c.as_upper_camel_case().as_str()
+            + c.as_enum_variant(block.as_upper_camel_case().as_str())
+                .as_str()
             + ","
             + "\n";
     }
@@ -141,7 +142,8 @@ fn generate_block_into_char(block: &UnicodeBlock, characters: &[UnicodeCharacter
             + "            "
             + block.as_upper_camel_case().as_str()
             + "::"
-            + c.as_upper_camel_case().as_str()
+            + c.as_enum_variant(block.as_upper_camel_case().as_str())
+                .as_str()
             + " => "
             + c.as_upper_snake_case().as_str()
             + ",\n";
@@ -168,7 +170,8 @@ fn generate_block_try_from_char(block: &UnicodeBlock, characters: &[UnicodeChara
             + " => Ok("
             + block.as_upper_camel_case().as_str()
             + "::"
-            + c.as_upper_camel_case().as_str()
+            + c.as_enum_variant(block.as_upper_camel_case().as_str())
+                .as_str()
             + "),\n";
     }
     content = content + "            _ => Err(()),\n" + "        }\n" + "    }\n" + "}\n";
@@ -241,7 +244,9 @@ fn generate_block_enum_impl(block: &UnicodeBlock, characters: &[UnicodeCharacter
         + "        "
         + block.as_upper_camel_case().as_str()
         + "::"
-        + characters[0].as_upper_camel_case().as_str()
+        + characters[0]
+            .as_enum_variant(block.as_upper_camel_case().as_str())
+            .as_str()
         + "\n"
         + "    }\n";
     // name
@@ -255,7 +260,8 @@ fn generate_block_enum_impl(block: &UnicodeBlock, characters: &[UnicodeCharacter
             + "            "
             + block.as_upper_camel_case().as_str()
             + "::"
-            + c.as_upper_camel_case().as_str()
+            + c.as_enum_variant(block.as_upper_camel_case().as_str())
+                .as_str()
             + " => \""
             + c.as_pretty_name().as_str()
             + "\",\n";

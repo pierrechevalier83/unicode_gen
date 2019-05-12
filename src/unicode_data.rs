@@ -30,6 +30,15 @@ impl UnicodeCharacter {
             .flatten()
             .collect()
     }
+    pub fn as_enum_variant(&self, enum_name: &str) -> String {
+        // Working around inconsistency in the data (#dirtyhack ;-))
+        let enum_name = if enum_name == "BoxDrawing" {
+            "BoxDrawings"
+        } else {
+            enum_name
+        };
+        self.as_upper_camel_case().replace(enum_name, "")
+    }
     pub fn as_pretty_name(&self) -> String {
         self.name.to_lowercase()
     }
