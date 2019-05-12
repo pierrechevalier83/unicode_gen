@@ -26,19 +26,23 @@ struct Options {
     out_dir: PathBuf,
 }
 
-fn generate_mod_rs(blocks: &UnicodeBlocks, out_dir: &PathBuf) -> std::io::Result<()> {
+fn generate_mod_rs(
+    blocks: &UnicodeBlocks,
+    data: &UnicodeData,
+    out_dir: &PathBuf,
+) -> std::io::Result<()> {
     let lib_file = PathBuf::from(out_dir).join("mod.rs");
-    let doc = String::from(
-        "/// Unicode characters, grouped by enums which represent one unicode block each.\n",
-    ) + "/// Each variant of these enums uniquely identifies once unicode character.\n\n";
-    let lib_content = std::iter::once(doc)
-        .chain(blocks.0.iter().map(|block| {
+    let lib_content = blocks
+        .0
+        .iter()
+        .map(|block| {
+            let characters = characters_in_range(&block.range, &data);
             String::new()
-                + generate_block_range_comment(&block).as_str()
+                + generate_block_doc_comment(&block, &characters).as_str()
                 + "pub mod "
                 + block.as_snake_case().as_str()
                 + ";\n\n"
-        }))
+        })
         .collect::<Vec<_>>();
     let binary_lib_content = lib_content
         .iter()
@@ -286,9 +290,6 @@ fn generate_block_files(
         let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
         let mut content = String::new();
-        // comment
-        content += generate_block_doc_comment(&block, &characters).as_str();
-        content += "\n";
         // constants
         content += generate_block_constants(&block, &characters).as_str();
         // enum
@@ -318,7 +319,7 @@ fn generate_unicode_types(
     out_dir: &PathBuf,
 ) -> std::io::Result<()> {
     create_dir_all(out_dir)?;
-    generate_mod_rs(blocks, out_dir)?;
+    generate_mod_rs(blocks, data, out_dir)?;
     generate_block_files(&blocks.0, data, out_dir)
 }
 
