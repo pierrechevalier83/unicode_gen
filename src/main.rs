@@ -83,13 +83,14 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharact
         for c in chars {
             s = s + " " + c.printable_character().as_str();
         }
-        s += "\n"
+        s += "\\\n"
     }
     s
 }
 
 fn generate_block_constants(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
-    let mut content = generate_block_doc_comment(&block, &characters);
+    let mut content =
+        String::from("/// A number of constants to give a name to all characters in this block.\n");
     content += "pub mod constants {\n";
     for c in characters {
         content = content
@@ -108,7 +109,9 @@ fn generate_block_enum(block: &UnicodeBlock, characters: &[UnicodeCharacter]) ->
     let mut content = String::new();
     content = content
         + "\n"
-        + generate_block_doc_comment(&block, &characters).as_str()
+        + "/// An enum to represent all characters in the "
+        + block.as_upper_camel_case().as_str()
+        + " block.\n"
         + "#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]\n"
         + "pub enum "
         + block.as_upper_camel_case().as_str()
@@ -283,6 +286,9 @@ fn generate_block_files(
         let file = PathBuf::from(out_dir).join(filename);
         let characters = characters_in_range(&block.range, data);
         let mut content = String::new();
+        // comment
+        content += generate_block_doc_comment(&block, &characters).as_str();
+        content += "\n";
         // constants
         content += generate_block_constants(&block, &characters).as_str();
         // enum
