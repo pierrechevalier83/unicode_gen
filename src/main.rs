@@ -236,7 +236,7 @@ fn generate_block_enum_impl(block: &UnicodeBlock, characters: &[UnicodeCharacter
     content = content + "\n" + "impl " + block.as_upper_camel_case().as_str() + " {\n";
     // new
     content = content
-        + "    /// The character with the lowest index this unicode block\n"
+        + "    /// The character with the lowest index in this unicode block\n"
         + "    pub fn new() -> Self {\n"
         + "        "
         + block.as_upper_camel_case().as_str()
@@ -260,7 +260,7 @@ fn generate_block_enum_impl(block: &UnicodeBlock, characters: &[UnicodeCharacter
             + c.as_pretty_name().as_str()
             + "\",\n";
     }
-    content = content + "            _ => \"\",\n" + "        }\n" + "    }\n";
+    content = content + "        }\n" + "    }\n";
     // end impl
     content = content + "}\n";
 
