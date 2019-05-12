@@ -26,19 +26,14 @@ struct Options {
     out_dir: PathBuf,
 }
 
-fn generate_mod_rs(
-    blocks: &UnicodeBlocks,
-    data: &UnicodeData,
-    out_dir: &PathBuf,
-) -> std::io::Result<()> {
+fn generate_mod_rs(blocks: &UnicodeBlocks, out_dir: &PathBuf) -> std::io::Result<()> {
     let lib_file = PathBuf::from(out_dir).join("mod.rs");
     let lib_content = blocks
         .0
         .iter()
         .map(|block| {
-            let characters = characters_in_range(&block.range, data);
             String::new()
-                + generate_block_doc_comment(&block, &characters).as_str()
+                + generate_block_range_comment(&block).as_str()
                 + "pub mod "
                 + block.as_snake_case().as_str()
                 + ";\n\n"
@@ -68,7 +63,7 @@ fn generate_char_doc_comment(c: &UnicodeCharacter) -> String {
         + "'\n"
 }
 
-fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+fn generate_block_range_comment(block: &UnicodeBlock) -> String {
     let begin = char::try_from(block.range.begin)
         .unwrap()
         .escape_unicode()
@@ -77,7 +72,11 @@ fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharact
         .unwrap()
         .escape_unicode()
         .to_string();
-    let mut s = String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\\\n" + "///\\\n";
+    String::from("/// ") + begin.as_str() + " → " + end.as_str() + "\\\n" + "///\\\n"
+}
+
+fn generate_block_doc_comment(block: &UnicodeBlock, characters: &[UnicodeCharacter]) -> String {
+    let mut s = generate_block_range_comment(block);
     for chars in characters.chunks(16) {
         s += "///";
         for c in chars {
@@ -318,7 +317,7 @@ fn generate_unicode_types(
     out_dir: &PathBuf,
 ) -> std::io::Result<()> {
     create_dir_all(out_dir)?;
-    generate_mod_rs(blocks, data, out_dir)?;
+    generate_mod_rs(blocks, out_dir)?;
     generate_block_files(&blocks.0, data, out_dir)
 }
 
