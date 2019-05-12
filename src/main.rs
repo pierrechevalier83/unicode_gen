@@ -186,8 +186,52 @@ fn generate_block_files(
                 + c.as_upper_camel_case().as_str()
                 + "),\n";
         }
-
         content = content + "            _ => Err(()),\n" + "        }\n" + "    }\n" + "}\n";
+        // Into<u32>
+        content = content
+            + "\n"
+            + "impl Into<u32> for "
+            + block.as_upper_camel_case().as_str()
+            + " {\n"
+            + "    fn into(self) -> u32 {\n"
+            + "        let c: char = self.into();\n"
+            + "        let hex = c\n"
+            + "            .escape_unicode()\n"
+            + "            .to_string()\n"
+            + "            .replace(\"\\\\u{\", \"\")\n"
+            + "            .replace(\"}\", \"\");\n"
+            + "        u32::from_str_radix(&hex, 16).unwrap()\n"
+            + "    }\n"
+            + "}\n";
+        // TryFrom<u32>
+        content = content
+            + "\n"
+            + "impl std::convert::TryFrom<u32> for "
+            + block.as_upper_camel_case().as_str()
+            + " {\n"
+            + "    type Error = ();\n"
+            + "    fn try_from(u: u32) -> Result<Self, Self::Error> {\n"
+            + "        if let Ok(c) = char::try_from(u) {\n"
+            + "            Self::try_from(c)\n"
+            + "        } else {\n"
+            + "            Err(())\n"
+            + "        }\n"
+            + "    }\n"
+            + "}\n";
+        // Iterator
+        content = content
+            + "\n"
+            + "impl Iterator for "
+            + block.as_upper_camel_case().as_str()
+            + " {\n"
+            + "    type Item = Self;\n"
+            + "    fn next(&mut self) -> Option<Self> {\n"
+            + "        let index: u32 = (*self).into();\n"
+            + "        use std::convert::TryFrom;\n"
+            + "        Self::try_from(index + 1).ok()\n"
+            + "    }\n"
+            + "}\n";
+
         let mut file = File::create(file)?;
         file.write_all(&content.bytes().collect::<Vec<_>>())?;
     }
